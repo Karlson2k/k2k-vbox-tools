@@ -52,7 +52,7 @@ __EOF__
 
 echo 'Downloading latest 98vboxadd-xclient...'
 if wget --version 2>/dev/null && \
-      wget http://virtualbox.org/svn/vbox/trunk/src/VBox/Additions/x11/Installer/98vboxadd-xclient2 -O /tmp/VBoxClient-all; then
+      wget http://virtualbox.org/svn/vbox/trunk/src/VBox/Additions/x11/Installer/98vboxadd-xclient -O /tmp/VBoxClient-all; then
   echo 'Download completed.'
 else
   echo 'Download failed, using local substituion.'
@@ -63,7 +63,7 @@ echo 'Installing (with superuser rights) 98vboxadd-xclient as VBoxClient-all...'
 sudo install -m 0755 /tmp/VBoxClient-all /usr/bin || exit 4
 rm -f /tmp/VBoxClient-all
 
-if [ -f /etc/xdg/autostart/vboxclient.desktop2 ]; then
+if [ -f /etc/xdg/autostart/vboxclient.desktop ]; then
   cp /etc/xdg/autostart/vboxclient.desktop /tmp/ &&
     echo 'Using installed vboxclient.desktop'
 fi
