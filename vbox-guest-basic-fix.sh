@@ -17,7 +17,7 @@
 # Latest version:
 # https://raw.githubusercontent.com/Karlson2k/k2k-vbox-tools/master/vbox-guest-basic-fix.sh
 #
-# Version 0.6.0
+# Version 0.7.0
 
 print_start_all_replacement () {
 cat <<__EOF__
@@ -50,32 +50,43 @@ X-KDE-autostart-after=panel
 __EOF__
 }
 
-echo 'Downloading latest 98vboxadd-xclient...'
-if wget --version 2>/dev/null && \
-      wget http://virtualbox.org/svn/vbox/trunk/src/VBox/Additions/x11/Installer/98vboxadd-xclient -O /tmp/VBoxClient-all; then
-  echo 'Download completed.'
-else
-  echo 'Download failed, using local substituion.'
-  print_start_all_replacement > /tmp/VBoxClient-all || exit 2
-fi
+[ "$(id -u)" != "0" ] && echo 'Superuser rights not owned, you may be asked for password'
 
-echo 'Installing (with superuser rights) 98vboxadd-xclient as VBoxClient-all...'
-sudo install -m 0755 /tmp/VBoxClient-all /usr/bin || exit 4
-rm -f /tmp/VBoxClient-all
+if [ -f /usr/bin/VBoxClient-all ]; then
+ echo 'File "/usr/bin/VBoxClient-all" is already present, skipping creation of it.'
+else
+  tmp_VBoxClient_all="$(mktemp VBoxClient-all.XXXXX)" || exit 2
+  echo 'Downloading latest 98vboxadd-xclient...'
+  if wget --version 2>/dev/null && \
+        wget http://virtualbox.org/svn/vbox/trunk/src/VBox/Additions/x11/Installer/98vboxadd-xclient -O "$tmp_VBoxClient_all"; then
+    echo 'Download completed.'
+  else
+    echo 'Download failed, using local substituion.'
+    print_start_all_replacement > "$tmp_VBoxClient_all" || exit 2
+  fi
+
+  echo 'Installing (with superuser rights) 98vboxadd-xclient as VBoxClient-all...'
+  sudo install -m 0755 -T "$tmp_VBoxClient_all" /usr/bin/VBoxClient-all || exit 4
+  rm -f "$tmp_VBoxClient_all"
+  unset tmp_VBoxClient_all
+  echo '"VBoxClient-all" was created and installed.'
+fi
+  
+tmp_vbclient_dsktp="$(mktemp vboxclient.desktop.XXXXX)" || exit 2
 
 if [ -f /etc/xdg/autostart/vboxclient.desktop ]; then
-  cp /etc/xdg/autostart/vboxclient.desktop /tmp/ &&
+  cp /etc/xdg/autostart/vboxclient.desktop "$tmp_vbclient_dsktp" &&
     echo 'Using installed vboxclient.desktop'
 fi
 
-if ! [ -f /tmp/vboxclient.desktop ]; then
-  print_vbclient_desktp_replacement > /tmp/vboxclient.desktop || exit 5
+if ! [ -f "$tmp_vbclient_dsktp" ]; then
+  print_vbclient_desktp_replacement > "$tmp_vbclient_dsktp"|| exit 5
   echo 'Using local substituion for vboxclient.desktop.'
 fi
 
 echo 'Configuring (with superuser rights) for autostart...'
-sudo install -m 0644 /tmp/vboxclient.desktop /usr/share/xsessions/ || exit 6
-rm -f /tmp/vboxclient.desktop
+sudo install -m 0644 -T "$tmp_vbclient_dsktp" /usr/share/xsessions/vboxclient.desktop
+rm -f "$tmp_vbclient_dsktp"
 echo 'Done'
 
 echo 'Configuring (with superuser rights) for redundant autostart...'
@@ -83,3 +94,4 @@ sudo install -m 0644 -T /usr/bin/VBoxClient-all /etc/X11/xinit/xinitrc.d/98-VBox
 echo 'Done'
 
 exit 0
+
