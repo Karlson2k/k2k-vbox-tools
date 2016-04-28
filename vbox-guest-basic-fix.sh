@@ -55,7 +55,7 @@ __EOF__
 if [ -f /usr/bin/VBoxClient-all ]; then
  echo 'File "/usr/bin/VBoxClient-all" is already present, skipping creation of it.'
 else
-  tmp_VBoxClient_all="$(mktemp VBoxClient-all.XXXXX)" || exit 2
+  tmp_VBoxClient_all="$(mktemp -t VBoxClient-all.XXXXX)" || exit 2
   echo 'Downloading latest 98vboxadd-xclient...'
   if wget --version 2>/dev/null && \
         wget http://virtualbox.org/svn/vbox/trunk/src/VBox/Additions/x11/Installer/98vboxadd-xclient -O "$tmp_VBoxClient_all"; then
@@ -72,7 +72,7 @@ else
   echo '"VBoxClient-all" was created and installed.'
 fi
   
-tmp_vbclient_dsktp="$(mktemp vboxclient.desktop.XXXXX)" || exit 2
+tmp_vbclient_dsktp="$(mktemp -t vboxclient.desktop.XXXXX)" || exit 2
 
 if [ -f /etc/xdg/autostart/vboxclient.desktop ]; then
   cp /etc/xdg/autostart/vboxclient.desktop "$tmp_vbclient_dsktp" &&
