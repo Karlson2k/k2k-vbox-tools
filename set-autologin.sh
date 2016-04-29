@@ -63,7 +63,7 @@ sudo -s <<_SUDOEND_
 if [ -f /etc/lxdm/lxdm.conf ]; then
   echo 'Found LXDM configuration.'
   modify_ok='no' || exit 5
-  if egrep -q -e '^#?autologin=' /etc/lxdm/lxdm.conf; then
+  if egrep -e '^#?autologin=' /etc/lxdm/lxdm.conf 1>/dev/null; then
     unset oldalname || exit 5
     if oldalname=\$(sed -n "s/^autologin=\(.*\)$/\1/1p" /etc/lxdm/lxdm.conf) && \
          [ -n "\$oldalname" ] ; then
@@ -75,7 +75,7 @@ if [ -f /etc/lxdm/lxdm.conf ]; then
     sed -e "s/^#*autologin=.*$/autologin=$alname/" /etc/lxdm/lxdm.conf > "$tmp_file" && \
       modify_ok='yes'
   else
-	if egrep -q -e '^\[base\]$' /etc/lxdm/lxdm.conf ; then
+	if egrep -e '^\[base\]$' /etc/lxdm/lxdm.conf 1>/dev/null ; then
 	  sed -e '/^\[base\]\$/a\\
 autologin=$alname
 '        /etc/lxdm/lxdm.conf > "$tmp_file" && \
