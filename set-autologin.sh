@@ -76,7 +76,7 @@ if [ -f /etc/lxdm/lxdm.conf ]; then
       modify_ok='yes'
   else
 	if egrep -q -e '^\[base\]$' /etc/lxdm/lxdm.conf ; then
-	  sed -e '/^\[base\]\$/a\
+	  sed -e '/^\[base\]\$/a\\
 autologin=$alname
 '        /etc/lxdm/lxdm.conf > "$tmp_file" && \
         modify_ok='yes'
