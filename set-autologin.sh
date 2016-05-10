@@ -57,6 +57,23 @@ if [ "$rerun_with_bash" = "yes" ] && which bash 1>/dev/null 2>/dev/null; then
   exit $?
 fi
 
+if [ ! -t 0 ] && ( [ "$(id -u)" != "0" ] || [ -z "$no_confirm" ] ); then
+  if [ -t 2 ]; then
+    echo "Redirection of STDIN is not supported." 1>&2
+  elif [ -t 1 ]; then
+    echo "Redirection of STDIN is not supported."
+  else
+    myname=`basename "$0"` || myname="$0"
+    kdialog --caption "$myname" --name "$myname" --title "Terminal is required" \
+      --error "<b>$myname</b> can be run only in interactive terminal. Open terminal application and re-run <b>$myname</b> from it." 2>/dev/null || \
+    zenity --error --text "<b>$myname</b> can be run only in interactive terminal. Open terminal application and re-run <b>$myname</b> from it." 2>/dev/null || \
+    notify-send -t 10000 -i dialog-error "Terminal required for <b>$myname</b>" \
+      "<b>$myname</b> can be run only in interactive terminal. Open terminal application and re-run <b>$myname</b> from it." 2>/dev/null || \
+    xmessage -nearmouse "$myname can be run only in interactive terminal. Open terminal application and re-run $myname from it." 2>/dev/null
+  fi
+  exit 4
+fi
+
 unset echo_n || exit 5
 echo -n '' 1>/dev/null 2>/dev/null && echo_n='echo -n'
 [ -z "$echo_n" ] && echo_n='echo'
