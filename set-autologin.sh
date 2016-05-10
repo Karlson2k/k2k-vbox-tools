@@ -78,16 +78,16 @@ unset echo_n || exit 5
 echo -n '' 1>/dev/null 2>/dev/null && echo_n='echo -n'
 [ -z "$echo_n" ] && echo_n='echo'
 
-[ -n $alname ] || alname=$SUDO_USER
+[ -n "$alname" ] || alname=${SUDO_USER}
 
-[ -n $alname ] || alname=$(id -u -n 2>/dev/null) || \
+[ -n "$alname" ] || alname=$(id -u -n 2>/dev/null) || \
   alname=$(whoami 2>/dev/null) || \
   alname=$LOGNAME || unset alname
 
-[ -z $alname ] && alname=$USER
-[ -z $alname ] && alname=$USERNAME
+[ -z "$alname" ] && alname=$USER
+[ -z "$alname" ] && alname=$USERNAME
 
-if [ -z $alname ]; then
+if [ -z "$alname" ]; then
   echo 'Cannot detect current user name. Exiting.' 1>&2
   exit 2
 fi
