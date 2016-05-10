@@ -22,10 +22,38 @@
 # Latest version:
 # https://raw.githubusercontent.com/Karlson2k/k2k-vbox-tools/master/set-autologin.sh
 #
-# Version 0.5.0
+# Version 0.5.3
 
-if [ "$1" != "--no-bash" ] && which bash 1>/dev/null 2>/dev/null; then
-  bash "$0" --no-bash "$@"
+rerun_with_bash='yes' || exit 5
+[ -z "${alname+set}" ] || unset alname || exit 5
+[ -z "${no_confirm+set}" ] || unset no_confirm || exit 5
+while [ -n "${1+set}" ]; do
+  if [ -n "$1" ]; then
+    case "$1" in
+      --no-bash ) rerun_with_bash='no'; shift ;;
+      -u | --user | --username ) alname="$2"
+        if [ -z "$alname" ]; then
+          echo "Username required for parameter \"$1\"" 1>&2
+          exit 10
+        fi
+        shift && shift ;;
+      -u* ) alname="${1#-u}"; shift ;;
+      --username* ) alname="${1#--username}"; shift ;;
+      --user* ) alname="${1#--user}"; shift ;;
+      -y | --yes ) no_confirm='yes'; shift ;;
+      * ) echo "Incorrect option \"$1\"" 1>&2; exit 10 ;;
+    esac
+  else
+    shift
+  fi
+done
+
+[ "$rerun_with_bash" = "yes" ] && [ -n "$BASH_VERSION" ] && \
+  ps -o comm= -p $$ 2>/dev/null | egrep -e 'bash$' 1>/dev/null && \
+  rerun_with_bash='no' # already in bash
+
+if [ "$rerun_with_bash" = "yes" ] && which bash 1>/dev/null 2>/dev/null; then
+  bash "$0" --no-bash ${alname+-u} "${alname}" ${no_confirm+-y}
   exit $?
 fi
 
@@ -33,7 +61,7 @@ unset echo_n || exit 5
 echo -n '' 1>/dev/null 2>/dev/null && echo_n='echo -n'
 [ -z "$echo_n" ] && echo_n='echo'
 
-alname=$SUDO_USER
+[ -n $alname ] || alname=$SUDO_USER
 
 [ -n $alname ] || alname=$(id -u -n 2>/dev/null) || \
   alname=$(whoami 2>/dev/null) || \
@@ -53,8 +81,13 @@ if [ "$alname" = "root" ]; then
 fi
 
 $echo_n "Use \"$alname\" for automatic login? [y/n]"
-read -n 1 answ 2>/dev/null || read answ || exit 5
-echo ''
+if [ -z "$no_confirm" ]; then
+  read -n 1 answ 2>/dev/null || read answ || exit 5
+  echo ''
+else
+  echo 'y'
+  answ='y' || exit 5
+fi
 if [ "$answ" != "y" ] && [ "$answ" != "Y" ]; then
   echo 'Exiting.'
   exit 5
