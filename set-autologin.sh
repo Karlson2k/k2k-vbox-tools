@@ -198,15 +198,12 @@ if [ -f /etc/gdm/custom.conf ] ; then
 AutomaticLoginEnable=True/' /etc/gdm/custom.conf > "$tmp_file" && \
       modify_ok='yes'
   else
-    echo "autologin is NOT here"
     if egrep -e '^\[daemon\]$' /etc/gdm/custom.conf 1>/dev/null; then
-      echo "[daemon] here"
       sed -e '/^AutomaticLoginEnable=/d' -e '/^\[daemon\]\$/a\\
 AutomaticLogin=$alname\\
 AutomaticLoginEnable=True' /etc/gdm/custom.conf > "$tmp_file" && \
         modify_ok='yes'
     else
-      echo "[daemon] is not here"
       sed -e '/^AutomaticLoginEnable=/d' /etc/gdm/custom.conf > "$tmp_file" && \
         echo "[daemon]
 AutomaticLogin=$alname
