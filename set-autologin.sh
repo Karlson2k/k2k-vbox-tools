@@ -133,6 +133,145 @@ fi
 
 [ -z "\$inst_cmd" ] && inst_cmd='inst_func'
 
+if sddm --example-config 1>/dev/null 2>/dev/null || [ -f /etc/sddm.conf ]; then
+  modify_ok='no' || exit 5
+  xsession_dir='' || exit 5
+  if sddm --example-config 1>/dev/null 2>/dev/null; then
+    echo 'Found SDDM display manager.'
+    # Try to get real xsession dir, even if SDDM is patched
+    xsession_dir=\$(sddm --example-config | sed -n -e '/^\\[XDisplay\\]\$/,/^\\[/ s|^SessionDir=\\(/.*\\)\$|\\1|p') || xsession_dir=''
+    [ -n "\$xsession_dir" ] && echo "xsessions directory used by SDDM: \\"\$xsession_dir\\""
+  else
+    echo 'Found SDDM configuration, but SDDM display manager was not found in PATH.'
+  fi
+  if [ -z "\$xsession_dir" ] && [ -f /etc/sddm.conf ]; then
+    # Try to read xsession dir from SDDM configuration file
+    xsession_dir=\$(sed -n -e '/^\\[XDisplay\\]\$/,/^\\[/ s|^SessionDir=\\(/.*\\)\$|\\1|p' /etc/sddm.conf) || xsession_dir=''
+    [ -n "\$xsession_dir" ] && echo "xsessions directory specified in SDDM configuration: \\"\$xsession_dir\\"" 
+  fi
+  if [ -z "\$xsession_dir" ] && [ -f /var/lib/sddm/state.conf ]; then
+    # Try to extract xsession dir from the last session
+    xsession_dir=\$(sed -n -e 's|^Session=\\(/..*\\)/..*\$|\\1|p' /var/lib/sddm/state.conf) || xsession_dir=''
+    [ -n "\$xsession_dir" ] && echo "xsessions directory used for last session: \\"\$xsession_dir\\"" 
+  fi
+  if [ -z "\$xsession_dir" ] && [ -n "$DESKTOP_SESSION" ]; then
+    # Extract xsession dir from current xsession
+    xsession_dir="${DESKTOP_SESSION%/*}" || xsession_dir=''
+    [ -n "\$xsession_dir" ] && echo "xsessions directory used in current session: \\"\$xsession_dir\\"" 
+  fi
+  if [ -z "\$xsession_dir" ] && [ -d "/usr/share/xsessions" ]; then
+    xsession_dir="/usr/share/xsessions"
+    echo "Assuming default xsessions directory: \\"\$xsession_dir\\"" 
+  fi
+
+  if [ -n "\$xsession_dir" ]; then
+    xsession_name='' || exit 5
+    if [ -n "$DESKTOP_SESSION" ]; then
+      # Get xsession name from current xsession
+      xsession_name="${DESKTOP_SESSION##*/}" && xsession_name="\${xsession_name%.desktop}" || xsession_name=''
+      [ -f "\${xsession_dir}/\${xsession_name}.desktop" ] || xsession_name=''
+      [ -n "\$xsession_name" ] && echo "Current xsession name: \\"\$xsession_name\\""
+    fi
+    if [ -z "\$xsession_name" ] && [ -f /var/lib/sddm/state.conf ]; then
+      # Try to extract xsession name from the last session
+      xsession_name=\$(sed -n -e 's|^Session=.*/\\(..*\\)\\.desktop\$|\\1|p' /var/lib/sddm/state.conf) || xsession_name=''
+      [ -f "\${xsession_dir}/\${xsession_name}.desktop" ] || xsession_name=''
+      [ -n "\$xsession_name" ] && echo "xsession name from last session: \\"\$xsession_name\\""
+    fi
+    if [ -z "\$xsession_name" ]; then
+      # Try to get preconfigured xsession name
+      xsession_name=\$(sddm --example-config | sed -n -e '/^\\[Autologin\\]\$/,/^\\[/ s|Session=\\(..*\\)\$|\\1|p') && \
+        xsession_name="\${xsession_name%.desktop}" || xsession_name=''
+      [ -f "\${xsession_dir}/\${xsession_name}.desktop" ] || xsession_name=''
+      [ -n "\$xsession_name" ] && echo "Pre-set autologin xsession name: \\"\$xsession_name\\""
+    fi
+    if [ -z "\$xsession_name" ] && [ -f /etc/sddm.conf ]; then
+      # Try to read autologin xsession name from SDDM configuration file
+      xsession_name=\$(sed -n -e '/^\\[Autologin\\]\$/,/^\\[/ s|Session=\\(..*\\)\$|\\1|p' /etc/sddm.conf) && \
+        xsession_name="\${xsession_name%.desktop}" || xsession_name=''
+      [ -f "\${xsession_dir}/\${xsession_name}.desktop" ] || xsession_name=''
+      [ -n "\$xsession_name" ] && echo "Autologin xsession name from SDDM configuration: \\"\$xsession_name\\""
+    fi
+    # Try various know KDE session names
+    if [ -z "\$xsession_name" ] && [ -f "\${xsession_dir}/plasma5.desktop" ]; then
+      xsession_name='plasma5'
+      echo "Found xsession: \\"\$xsession_name\\""
+    fi
+    if [ -z "\$xsession_name" ] && [ -f "\${xsession_dir}/plasma5.desktop" ]; then
+      xsession_name='plasma5'
+      echo "Found xsession: \\"\$xsession_name\\""
+    fi
+    if [ -z "\$xsession_name" ] && [ -f "\${xsession_dir}/kde-plasma.desktop" ]; then
+      xsession_name='kde-plasma'
+      echo "Found xsession: \\"\$xsession_name\\""
+    fi
+    if [ -z "\$xsession_name" ] && [ -f "\${xsession_dir}/xsession.desktop" ]; then
+      xsession_name='xsession'
+      echo "Found xsession: \\"\$xsession_name\\""
+    fi
+    if [ -z "\$xsession_name" ]; then
+      # Try to use any avalable xsession if everything else failed
+      for fname in "\${xsession_dir}/"*.desktop ; do
+        if [ -z "\$xsession_name" ] && [ -f "\$fname" ]; then
+          xsession_name="\${fname##*/}" && xsession_name="\${xsession_name%.desktop}" || xsession_name=''
+        fi
+      done
+      [ -n "\$xsession_name" ] && echo "First found xsession: \\"\$xsession_name\\""
+    fi
+
+    if [ -n "\$xsession_name" ]; then
+      if [ -f /etc/sddm.conf ]; then
+        if egrep -e '^\\[Autologin\\]' /etc/sddm.conf 1>/dev/null 2>/dev/null; then
+          unset oldalname || exit 5
+          oldalname=\$(sed -n -e '/^\\[Autologin\\]\$/,/^\\[/ s|^User=\\(.*\\)\$|\\1|p' /etc/sddm.conf) || unset oldalname
+          unset oldxsession || exit 5
+          oldxsession=\$(sed -n -e '/^\\[Autologin\\]\$/,/^\\[/ s|^Session=\\(.*\\)\$|\\1|p' /etc/sddm.conf) \
+            && oldxsession="\${oldxsession%.desktop}" || unset oldxsession
+          if [ -n "\$oldalname" ]; then
+            if [ -n "\$oldxsession" ]; then
+              if [ "\$oldalname" = "$alname" ] && [ "\$oldxsession" = "\$xsession_name" ]; then
+                echo "SDDM was already configured to automatically login user \\"\$oldalname\\" with xsession \\"\$oldxsession\\", but configureation will be updated anyway just in case."
+              else
+                echo "SDDM was configured to automatically login user \\"\$oldalname\\" with xsession \\"\$oldxsession\\"."
+              fi
+            else
+              echo "SDDM was configured to automatically login user \\"\$oldalname\\"."
+            fi
+          elif [ -n "\$oldxsession" ]; then
+            echo "SDDM was configured to use xsession \\"\$oldxsession\\" for autologin, but autologin username was not set."
+          fi
+          sed -e '/^\\[Autologin\\]\$/,/^\\[/ s|^\\(User=.*\\)\$|# \\1|' \
+              -e '/^\\[Autologin\\]\$/,/^\\[/ s|^\\(Session=.*\\)\$|# \\1|' \
+              -e "/^\\[Autologin\\]\$/ a\\
+User=$alname\\\\
+Session=\${xsession_name}.desktop" /etc/sddm.conf > "$tmp_file" && \$inst_cmd -m 0644 -T "$tmp_file" /etc/sddm.conf && modify_ok='yes'
+        else
+          echo "
+[Autologin]
+User=$alname
+Session=\${xsession_name}.desktop" >> /etc/sddm.conf && modify_ok='yes'
+        fi
+        [ "\$modify_ok" = "yes" ] && echo "SDDM configuration is updated to automatically login user \\"$alname\\" with xsession \\"\$xsession_name\\"."
+      else
+        echo "[Autologin]
+User=$alname
+Session=\${xsession_name}.desktop" > "$tmp_file" && \$inst_cmd -m 0644 -T "$tmp_file" /etc/sddm.conf && modify_ok='yes'
+        [ "\$modify_ok" = "yes" ] && echo "Created SDDM configuration for automatic login of user \\"$alname\\" with xsession \\"\$xsession_name\\"."
+      fi
+      [ "\$modify_ok" = "yes" ] || echo 'Failed to configure SDDM for automatic login.' 1>&2
+    else
+      echo "Failed to detect any usable xsession name, SDDM configuration was not updated." 1>&2
+    fi
+  else
+    echo "Failed to detect xsession directory, SDDM configuration was not updated." 1>&2
+  fi
+else
+  echo 'SDDM is not found, skipping.'
+fi
+
+# Empty temp file
+truncate -s 0 "$tmp_file" 2>/dev/null || : > "$tmp_file"
+
 if [ -f /etc/lxdm/lxdm.conf ]; then
   echo 'Found LXDM configuration.'
   modify_ok='no' || exit 5
